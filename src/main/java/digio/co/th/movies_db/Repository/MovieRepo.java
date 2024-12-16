@@ -12,6 +12,8 @@ import java.util.List;
 
 public interface MovieRepo extends JpaRepository<Movies,Long>, JpaSpecificationExecutor<Movies> {
 
+    Page<Movies> findAll(Pageable pageable);
+
     @Query("SELECT m FROM Movies m JOIN m.genres g WHERE  g.name = :genreName")
     List<Movies> findMoviesByGenres(@Param("genreName") String genreName);
 }

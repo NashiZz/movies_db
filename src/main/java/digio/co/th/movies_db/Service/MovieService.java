@@ -6,10 +6,11 @@ import digio.co.th.movies_db.Entity.Movies;
 import digio.co.th.movies_db.Repository.GenresRepo;
 import digio.co.th.movies_db.Repository.MovieRepo;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
-import java.awt.print.Pageable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,8 +21,13 @@ public class MovieService {
     @Autowired
     private MovieRepo movieRepo;
 
-    public List<Movies> getMovieAll(){
-        return movieRepo.findAll();
+//    public List<Movies> getMovieAll(){
+//        return movieRepo.findAll();
+//    }
+
+    public Page<Movies> getMovieAll(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return movieRepo.findAll(pageable);
     }
 
     public Movies getMovieById(Long id) {

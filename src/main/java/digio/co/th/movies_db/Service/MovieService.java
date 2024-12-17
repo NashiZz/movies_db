@@ -39,6 +39,10 @@ public class MovieService {
         return movieRepo.findMoviesByGenres(genreName);
     }
 
+    public Page<Movies> getMoviesAllGenre(String genreName, Pageable pageable) {
+        return movieRepo.findMoviesAllGenres(genreName, pageable);
+    }
+
     public void saveMovie(List<Movies> movies){
         movieRepo.saveAll(movies);
     }

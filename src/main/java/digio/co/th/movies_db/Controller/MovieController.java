@@ -9,6 +9,8 @@ import digio.co.th.movies_db.Service.MovieService;
 import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
@@ -89,6 +91,16 @@ public class MovieController {
     public Page<Movies> getMovieAll(@RequestParam(defaultValue = "0") int page,
                                     @RequestParam(defaultValue = "10") int size) {
         return movieService.getMovieAll(page, size);
+    }
+
+    @GetMapping("/movies/Allgenre")
+    public Page<Movies> getMoviesByGenre(
+            @RequestParam String genre,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return movieService.getMoviesAllGenre(genre, pageable);
     }
 
     @GetMapping("/movies/genre")

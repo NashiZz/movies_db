@@ -16,4 +16,7 @@ public interface MovieRepo extends JpaRepository<Movies,Long>, JpaSpecificationE
 
     @Query("SELECT m FROM Movies m JOIN m.genres g WHERE  g.name = :genreName")
     List<Movies> findMoviesByGenres(@Param("genreName") String genreName);
+
+    @Query("SELECT m FROM Movies m JOIN m.genres g WHERE g.name = :genreName")
+    Page<Movies> findMoviesAllGenres(@Param("genreName") String genreName, Pageable pageable);
 }

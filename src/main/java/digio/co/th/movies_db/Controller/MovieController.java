@@ -30,38 +30,6 @@ public class MovieController {
     @Autowired
     private MovieRepo movieRepo;
 
-    @GetMapping("/fetch-movies")
-    public String fetchMoviesFromTMDB() {
-        String apiKey = "8d412ae1959630fbb306cdb1b45b0979";
-        String url = "https://api.themoviedb.org/3/movie/popular?api_key=" + apiKey;
-
-        RestTemplate restTemplate = new RestTemplate();
-        TMDBRes response = restTemplate.getForObject(url, TMDBRes.class);
-
-        if (response != null && response.getResults() != null) {
-            List<Movies> movies = mapTMDBResultsToMovies(response.getResults());
-            movieService.saveMovie(movies);
-            return "Movies fetched and saved successfully!";
-        } else {
-            throw new RuntimeException("Failed to fetch movies from TMDB");
-        }
-    }
-
-    private List<Movies> mapTMDBResultsToMovies(List<TMDB_Movie> results) {
-        List<Movies> moviesList = new ArrayList<>();
-        for (TMDB_Movie result : results) {
-            Movies movie = new Movies();
-            movie.setIdmovie(result.getId());
-            movie.setTitle(result.getTitle());
-            movie.setOverview(result.getOverview());
-            movie.setRelease_date(result.getRelease_date());
-            movie.setRating(result.getVote_average());
-            movie.setPoster_path("https://image.tmdb.org/t/p/w500" + result.getPoster_path());
-            moviesList.add(movie);
-        }
-        return moviesList;
-    }
-
     @PostMapping("/movies/searchName")
     public Page<Movies> search(@RequestBody ReqSearchMovie req){
         return movieRepo.findAll((root, query, cb)->{
@@ -81,11 +49,6 @@ public class MovieController {
     public Movies getMovieById(@PathVariable Long id) {
         return movieService.getMovieById(id);
     }
-
-//    @GetMapping("/movies")
-//    public List<Movies> getMovieAll() {
-//        return movieService.getMovieAll();
-//    }
 
     @GetMapping("/movies")
     public Page<Movies> getMovieAll(@RequestParam(defaultValue = "0") int page,

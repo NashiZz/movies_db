@@ -6,7 +6,7 @@ import org.springframework.data.domain.Pageable;
 
 @Data
 public class ReqSearchGenre {
-    private String genre;
+    private String name;
 
     private Integer pageNo = 0;
     private Integer pageSize = 10;

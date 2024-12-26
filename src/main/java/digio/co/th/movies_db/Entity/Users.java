@@ -29,4 +29,7 @@ public class Users {
 
     @Column(length = 255)
     private String password;
+
+    @Column(length = 1000)
+    private String img_profile;
 }

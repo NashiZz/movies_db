@@ -24,11 +24,14 @@ import static java.util.Objects.isNull;
 @RequestMapping("api")
 public class MovieController {
 
-    @Autowired
     private MovieService movieService;
+    private MovieRepo movieRepo;
 
     @Autowired
-    private MovieRepo movieRepo;
+    public MovieController(MovieService movieService, MovieRepo movieRepo) {
+        this.movieService = movieService;
+        this.movieRepo = movieRepo;
+    }
 
     @PostMapping("/movies/searchName")
     public Page<Movies> search(@RequestBody ReqSearchMovie req){
@@ -53,7 +56,8 @@ public class MovieController {
     @GetMapping("/movies")
     public Page<Movies> getMovieAll(@RequestParam(defaultValue = "0") int page,
                                     @RequestParam(defaultValue = "10") int size) {
-        return movieService.getMovieAll(page, size);
+        Pageable pageable = PageRequest.of(page, size);
+        return movieService.getMovieAll(pageable);
     }
 
     @GetMapping("/movies/Allgenre")
@@ -71,4 +75,5 @@ public class MovieController {
         return movieService.getMoviesByGenre(genre);
     }
 }
+
 

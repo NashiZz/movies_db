@@ -8,28 +8,42 @@ import digio.co.th.movies_db.Entity.Genres;
 import digio.co.th.movies_db.Entity.Movies;
 import digio.co.th.movies_db.Repository.GenresRepo;
 import digio.co.th.movies_db.Repository.MovieRepo;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.net.http.HttpClient;
 import java.util.HashSet;
-import java.util.Optional;
+import java.util.List;
 import java.util.Set;
 
 @Component
 public class MovieDataLoader implements CommandLineRunner {
+    private static final Logger logger = LoggerFactory.getLogger(MovieDataLoader.class);
 
-    @Autowired
+    @Value("${tmdb.api.key}")
+    private String API_KEY;
+
     private MovieRepo movieRepo;
+    private GenresRepo genresRepo;
+    private RestTemplate restTemplate;
 
     @Autowired
-    private GenresRepo genresRepo;
+    public MovieDataLoader(MovieRepo movieRepo, GenresRepo genresRepo, RestTemplate restTemplate) {
+        this.movieRepo = movieRepo;
+        this.genresRepo = genresRepo;
+        this.restTemplate = restTemplate;
+    }
 
     private final String TMDB_MOVIE_API_URL = "https://api.themoviedb.org/3/movie/now_playing";
     private final String TMDB_GENRE_API_URL = "https://api.themoviedb.org/3/genre/movie/list";
-    private final String API_KEY = "8d412ae1959630fbb306cdb1b45b0979";
 
     @Override
     public void run(String... args) throws Exception {
@@ -37,25 +51,28 @@ public class MovieDataLoader implements CommandLineRunner {
         loadMovies();
     }
 
-//    private RestTemplate createRestTemplateWithTimeout() {
-//        int connectTimeout = 5000;
-//        int readTimeout = 5000;
+    @Scheduled(cron = "0 0 6 * * *")
+    public void loadMoviesDaily() {
+        loadMovies();
+    }
 
     private void loadGenres() {
-        String url = String.format("%s?api_key=%s&language=en-US", TMDB_GENRE_API_URL, API_KEY);
-        RestTemplate restTemplate = new RestTemplate();
-        GenresRes response = restTemplate.getForObject(url, GenresRes.class);
+        try {
+            String url = String.format("%s?api_key=%s&language=en-US", TMDB_GENRE_API_URL, API_KEY);
+            GenresRes response = restTemplate.getForObject(url, GenresRes.class);
 
-        if (response != null && response.getGenres() != null) {
-            for (Genres_Movie genresMovie : response.getGenres()) {
-                Genres genres = new Genres();
-                genres.setIdgen(genresMovie.getId());
-                genres.setName(genresMovie.getName());
-
-                if (!genresRepo.existsById(genres.getIdgen())) {
-                    genresRepo.save(genres);
+            if (response != null && response.getGenres() != null) {
+                for (Genres_Movie genresMovie : response.getGenres()) {
+                    if (!genresRepo.existsById(genresMovie.getId())) {
+                        Genres genres = new Genres();
+                        genres.setIdgen(genresMovie.getId());
+                        genres.setName(genresMovie.getName());
+                        genresRepo.save(genres);
+                    }
                 }
             }
+        } catch (Exception e) {
+            logger.error("Error occurred while loading genres", e);
         }
     }
 
@@ -67,56 +84,45 @@ public class MovieDataLoader implements CommandLineRunner {
         while (page <= totalPages && page <= maxPages) {
             try {
                 String url = String.format("%s?api_key=%s&language=en-US&page=%d", TMDB_MOVIE_API_URL, API_KEY, page);
-                RestTemplate restTemplate = new RestTemplate();
-
                 TMDBRes movieResponse = restTemplate.getForObject(url, TMDBRes.class);
 
                 if (movieResponse != null && movieResponse.getResults() != null) {
                     totalPages = movieResponse.getTotal_pages();
-
-                    for (TMDB_Movie tmdbMovie : movieResponse.getResults()) {
-                        Optional<Movies> existingMovie = movieRepo.findById(tmdbMovie.getId());
-
-                        Movies movie = existingMovie.orElseGet(Movies::new);
-                        movie.setIdmovie(tmdbMovie.getId());
-
-                        if (tmdbMovie.getTitle() != null && !tmdbMovie.getTitle().isEmpty()) {
-                            movie.setTitle(tmdbMovie.getTitle());
-                        } else if (tmdbMovie.getName() != null && !tmdbMovie.getName().isEmpty()) {
-                            movie.setTitle(tmdbMovie.getName());
-                        }
-
-                        movie.setOverview(tmdbMovie.getOverview());
-
-                        if (tmdbMovie.getRelease_date() != null && !tmdbMovie.getRelease_date().isEmpty()) {
-                            movie.setRelease_date(tmdbMovie.getRelease_date());
-                        } else if (tmdbMovie.getFirst_air_date() != null && !tmdbMovie.getFirst_air_date().isEmpty()) {
-                            movie.setRelease_date(tmdbMovie.getFirst_air_date());
-                        }
-
-                        movie.setRating(tmdbMovie.getVote_average());
-                        movie.setPoster_path(tmdbMovie.getPoster_path());
-                        movie.setBackground_path(tmdbMovie.getBackdrop_path());
-
-                        Set<Genres> movieGenres = new HashSet<>(genresRepo.findAllById(tmdbMovie.getGenre_ids()));
-
-                        if (!movieGenres.isEmpty()) {
-                            movie.setGenres(movieGenres);
-                            movieRepo.save(movie);
-                        } else {
-                            System.out.println("No genres found for movie with ID: " + tmdbMovie.getId());
-                        }
-                    }
+                    processMovies(movieResponse.getResults());
                 }
 
                 page++;
-                Thread.sleep(500);
 
             } catch (Exception e) {
-                System.err.println("Error occurred while loading movies for page: " + page);
-                e.printStackTrace();
+                logger.error("Error occurred while loading movies for page: {}", page, e);
                 break;
             }
         }
+    }
+
+    @Transactional
+    private void processMovies(List<TMDB_Movie> tmdbMovies) {
+        for (TMDB_Movie tmdbMovie : tmdbMovies) {
+            Movies movie = movieRepo.findById(tmdbMovie.getId()).orElseGet(Movies::new);
+            movie.setIdmovie(tmdbMovie.getId());
+            setMovieDetails(movie, tmdbMovie);
+
+            Set<Genres> movieGenres = new HashSet<>(genresRepo.findAllById(tmdbMovie.getGenre_ids()));
+            if (!movieGenres.isEmpty()) {
+                movie.setGenres(movieGenres);
+                movieRepo.save(movie);
+            } else {
+                System.out.println("No genres found for movie with ID: " + tmdbMovie.getId());
+            }
+        }
+    }
+
+    private void setMovieDetails(Movies movie, TMDB_Movie tmdbMovie) {
+        movie.setTitle(StringUtils.defaultIfBlank(tmdbMovie.getTitle(), tmdbMovie.getName()));
+        movie.setOverview(tmdbMovie.getOverview());
+        movie.setRelease_date(StringUtils.defaultIfBlank(tmdbMovie.getRelease_date(), tmdbMovie.getFirst_air_date()));
+        movie.setRating(tmdbMovie.getVote_average());
+        movie.setPoster_path(tmdbMovie.getPoster_path());
+        movie.setBackground_path(tmdbMovie.getBackdrop_path());
     }
 }

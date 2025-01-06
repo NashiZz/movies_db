@@ -13,15 +13,15 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // ปิด CSRF (ถ้าไม่ต้องการ)
+                .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // อนุญาตทุกคำขอ
+                        .anyRequest().permitAll()
                 );
         return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(); // ใช้ BCrypt สำหรับการเข้ารหัสรหัสผ่าน
+        return new BCryptPasswordEncoder();
     }
 }

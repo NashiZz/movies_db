@@ -21,12 +21,7 @@ public class MovieService {
     @Autowired
     private MovieRepo movieRepo;
 
-//    public List<Movies> getMovieAll(){
-//        return movieRepo.findAll();
-//    }
-
-    public Page<Movies> getMovieAll(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    public Page<Movies> getMovieAll(Pageable pageable) {
         return movieRepo.findAll(pageable);
     }
 
@@ -41,9 +36,5 @@ public class MovieService {
 
     public Page<Movies> getMoviesAllGenre(String genreName, Pageable pageable) {
         return movieRepo.findMoviesAllGenres(genreName, pageable);
-    }
-
-    public void saveMovie(List<Movies> movies){
-        movieRepo.saveAll(movies);
     }
 }

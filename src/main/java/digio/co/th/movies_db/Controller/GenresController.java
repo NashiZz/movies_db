@@ -7,10 +7,12 @@ import digio.co.th.movies_db.Entity.Movies;
 import digio.co.th.movies_db.Repository.GenresRepo;
 import digio.co.th.movies_db.Service.GenreService;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -22,14 +24,13 @@ import static ch.qos.logback.core.util.StringUtil.isNullOrEmpty;
 @RequestMapping("api")
 public class GenresController {
 
-    private GenreService genreService;
+    private final GenreService genreService;
+    private final GenresRepo genresRepo;
 
     @Autowired
-    private GenresRepo genresRepo;
-
-    @Autowired
-    public GenresController(GenreService genreService) {
+    public GenresController(GenreService genreService, GenresRepo genresRepo) {
         this.genreService = genreService;
+        this.genresRepo = genresRepo;
     }
 
     @GetMapping("/genres")
@@ -38,7 +39,8 @@ public class GenresController {
     }
 
     @GetMapping("/genres/search")
-    public Page<Movies> searchGenres(@RequestParam String genre, Pageable pageable) {
+    public Page<Movies> searchGenres(@RequestParam @NotBlank(message = "Genre must not be empty") String genre,
+                                     @PageableDefault(size = 20) Pageable pageable) {
         return genreService.searchMovieByGenres(genre, pageable);
     }
 
